@@ -1,1 +1,1 @@
-# ToDoApp
+This repository contains the source code for a backend service written in Go using the Gin web framework. It sets up an HTTP server on port 8080 and provides RESTful routes for creating, retrieving, updating, and deleting tasks, implementing basic CRUD operations. This project is designed as a foundation for building scalable and maintainable web applications with Go.
