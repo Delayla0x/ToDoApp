@@ -3,8 +3,8 @@ package main
 import (
 	"encoding/json"
 	"net/http"
-	"sync"
 	"strconv"
+	"sync"
 )
 
 type Task struct {
@@ -28,6 +28,7 @@ func createTaskHandler(w http.ResponseWriter, r *http.Request) {
 	idCounter++
 	taskStore[task.ID] = task
 	w.WriteHeader(http.StatusCreated)
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(task)
 }
 
@@ -38,6 +39,7 @@ func getTasksHandler(w http.ResponseWriter, r *http.Request) {
 	for _, task := range taskStore {
 		tasks = append(tasks, task)
 	}
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(tasks)
 }
 
@@ -54,13 +56,19 @@ func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	taskStore[updatedTask.ID] = updatedTask
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(updatedTask)
 }
 
 func deleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 	mutex.Lock()
 	defer mutex.Unlock()
-	id, err := strconv.Atoi(r.URL.Query().Get("id"))
+	idStr := r.URL.Query().Get("id")
+	if idStr == "" {
+		http.Error(w, "Task ID is required", http.StatusBadRequest)
+		return
+	}
+	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		http.Error(w, "Invalid task ID", http.StatusBadRequest)
 		return
