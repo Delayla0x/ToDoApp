@@ -12,100 +12,98 @@ type Task struct {
 	Name string `json:"name"`
 }
 
-var tasks = make(map[string]Task)
+var taskMap = make(map[string]Task)
 
 func main() {
-	r := gin.Default()
+	router := gin.Default()
 
-	// Middleware for logging the type of HTTP request and path
-	r.Use(func(c *gin.Context) {
-		c.Next()
+	router.Use(func(context *gin.Context) {
+		context.Next()
 	})
 
-	// Initialize tasks with environment variable or default values
-	initializeTasks()
+	loadInitialTasks()
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+	serverPort := os.Getenv("PORT")
+	if serverPort == "" {
+		serverPort = "8080"
 	}
 
-	r.GET("/tasks", getTasks)
-	r.POST("/tasks", createTask)
-	r.GET("/tasks/:id", getTaskByID)
-	r.PUT("/tasks/:id", updateTask)
-	r.DELETE("/tasks/:id", deleteTask)
+	router.GET("/tasks", getAllTasks)
+	router.POST("/tasks", createTask)
+	router.GET("/tasks/:id", getTaskByID)
+	router.PUT("/tasks/:id", updateTaskByID)
+	router.DELETE("/tasks/:id", deleteTaskByID)
 
-	r.Run(":" + port)
+	router.Run(":" + serverPort)
 }
 
-func initializeTasks() {
-	// Example: Load tasks from environment or use defaults
+func loadInitialTasks() {
 	defaultTasks := []Task{
 		{ID: uuid.New().String(), Name: "Learn Go"},
 		{ID: uuid.New().String(), Name: "Build a web server"},
 	}
 
 	for _, task := range defaultTasks {
-		tasks[task.ID] = task
+		taskMap[task.ID] = task
 	}
 }
 
-func getTasks(c *gin.Context) {
-	var tasksList []Task
-	for _, task := range tasks {
-		tasksList = append(tasksList, task)
+func getAllTasks(context *gin.Context) {
+	var taskList []Task
+	for _, task := range taskMap {
+		taskList = append(taskList, task)
 	}
-	c.IndentedJSON(http.StatusOK, tasksList)
+	context.IndentedJSON(http.StatusOK, taskList)
 }
 
-func createTask(c *gin.Context) {
+func createTask(context *gin.Context) {
 	var newTask Task
 
-	if err := c.BindJSON(&newTask); err != nil {
+	if err := context.BindJSON(&newTask); err != nil {
+		context.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid task format"})
 		return
 	}
 
-	newTask.ID = uuid.New().String() // Generate a unique ID
-	tasks[newTask.ID] = newTask
-	c.IndentedJSON(http.StatusCreated, newTask)
+	newTask.ID = uuid.New().String()
+	taskMap[newTask.ID] = newTask
+	context.IndentedJSON(http.StatusCreated, newTask)
 }
 
-func getTaskByID(c *gin.Context) {
-	id := c.Param("id")
+func getTaskByID(context *gin.Context) {
+	taskID := context.Param("id")
 
-	if task, exists := tasks[id]; exists {
-		c.IndentedJSON(http.StatusOK, task)
+	if task, exists := taskMap[taskID]; exists {
+		context.IndentedJSON(http.StatusOK, task)
 		return
 	}
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "task not found"})
+	context.IndentedJSON(http.StatusNotFound, gin.H{"message": "Task not found"})
 }
 
-func updateTask(c *gin.Context) {
-	id := c.Param("id")
+func updateTaskByID(context *gin.Context) {
+	taskID := context.Param("id")
 	var updatedTask Task
 
-	if err := c.BindJSON(&updatedTask); err != nil {
+	if err := context.BindJSON(&updatedTask); err != nil {
+		context.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid task format"})
 		return
 	}
 
-	if _, exists := tasks[id]; exists {
-		// Preserve the task ID and only update task's name
-		updatedTask.ID = id
-		tasks[id] = updatedTask
-		c.IndentedJSON(http.StatusOK, updatedTask)
+	if _, exists := taskMap[taskID]; exists {
+		updatedTask.ID = taskID
+		taskMap[taskID] = updatedTask
+		context.IndentedJSON(http.StatusOK, updatedTask)
 		return
 	}
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "task not found"})
+	context.IndentedJSON(http.StatusNotFound, gin.H{"message": "Task not found"})
 }
 
-func deleteTask(c *gin.Context) {
-	id := c.Param("id")
+func deleteTaskByID(context *gin.Context) {
+	taskID := context.Param("id")
 
-	if _, exists := tasks[id]; exists {
-		delete(tasks, id)
-		c.Status(http.StatusNoContent)
+	if _, exists := taskMap[taskID]; exists {
+		delete(taskMap, taskID)
+		context.Status(http.StatusNoContent)
 		return
 	}
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "task not found"})
+	context.IndentedJSON(http.StatusNotFound, gin.H{"message": "Task not found"})
 }
