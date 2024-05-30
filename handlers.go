@@ -12,96 +12,110 @@ type Task struct {
 	Content string `json:"content"`
 }
 
-var taskStore = make(map[int]Task)
-var idCounter = 1
+var taskMap = make(map[int]Task)
+
+var nextTaskID = 1
+
 var mutex sync.Mutex
 
-func createTaskHandler(w http.ResponseWriter, r *http.Request) {
+func createTask(w http.ResponseWriter, r *http.Request) {
 	mutex.Lock()
 	defer mutex.Unlock()
-	var task Task
-	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
+
+	var newTask Task
+	if err := json.NewDecoder(r.Body).Decode(&newTask); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	task.ID = idCounter
-	idCounter++
-	taskStore[task.ID] = task
+
+	newTask.ID = nextTaskID
+	nextTaskID++
+	taskMap[newTask.ID] = newTask
+
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(task)
+	json.NewEncoder(w).Encode(newTask)
 }
 
-func getTasksHandler(w http.ResponseWriter, r *http.Request) {
+func getAllTasks(w http.ResponseWriter, r *http.Request) {
 	mutex.Lock()
 	defer mutex.Unlock()
-	tasks := make([]Task, 0, len(taskStore))
-	for _, task := range taskStore {
+
+	tasks := make([]Task, 0, len(taskMap))
+	for _, task := range taskMap {
 		tasks = append(tasks, task)
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(tasks)
 }
 
-func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
+func updateTask(w http.ResponseWriter, r *http.Request) {
 	mutex.Lock()
 	defer mutex.Unlock()
-	var updatedTask Task
-	if err := json.NewDecoder(r.Body).Decode(&updatedTask); err != nil {
+
+	var modifiedTask Task
+	if err := json.NewDecoder(r.Body).Decode(&modifiedTask); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if _, ok := taskStore[updatedTask.ID]; !ok {
+
+	if _, exists := taskMap[modifiedTask.ID]; !exists {
 		http.Error(w, "Task not found", http.StatusNotFound)
 		return
 	}
-	taskStore[updatedTask.ID] = updatedTask
+	taskMap[modifiedTask.ID] = modifiedTask
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(updatedTask)
+	json.NewEncoder(w).Encode(modifiedTask)
 }
 
-func deleteTaskHandler(w http.ResponseWriter, r *http.Request) {
+func deleteTask(w http.ResponseWriter, r *http.Request) {
 	mutex.Lock()
 	defer mutex.Unlock()
+
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
 		http.Error(w, "Task ID is required", http.StatusBadRequest)
 		return
 	}
+
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		http.Error(w, "Invalid task ID", http.StatusBadRequest)
 		return
 	}
-	if _, ok := taskStore[id]; !ok {
+
+	if _, exists := taskMap[id]; !exists {
 		http.Error(w, "Task not found", http.StatusNotFound)
 		return
 	}
-	delete(taskStore, id)
+	delete(taskMap, id)
+
 	w.WriteHeader(http.StatusOK)
 }
 
-func setupRoutes() {
+func configureRoutes() {
 	http.HandleFunc("/tasks", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			getTasksHandler(w, r)
+			getAllTasks(w, r)
 		case http.MethodPost:
-			createTaskHandler(w, r)
+			createTask(w, r)
 		}
 	})
 
 	http.HandleFunc("/task", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPut:
-			updateTaskHandler(w, r)
+			updateTask(w, r)
 		case http.MethodDelete:
-			deleteTaskHandler(w, r)
+			deleteTask(w, r)
 		}
 	})
 }
 
 func main() {
-	setupRoutes()
+	configureRoutes()
 	http.ListenAndServe(":8080", nil)
 }
