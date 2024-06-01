@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"log"
 	"net/http"
 	"os"
 )
@@ -19,10 +20,10 @@ func main() {
 	loadInitialTasks()
 
 	serverPort := getServerPort()
+	log.Printf("Server starting on port %s\n", serverPort)
 	router.Run(":" + serverPort)
 }
 
-// setupRouter initializes and configures the router
 func setupRouter() *gin.Engine {
 	router := gin.Default()
 
@@ -35,8 +36,6 @@ func setupRouter() *gin.Engine {
 	return router
 }
 
-// getServerPort retrieves the port number from the environment variables,
-// defaulting to 8080 if none is found
 func getServerPort() string {
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -45,7 +44,6 @@ func getServerPort() string {
 	return port
 }
 
-// loadInitialTasks pre-loads the task map with default tasks
 func loadInitialTasks() {
 	defaultTasks := []Task{
 		{ID: uuid.New().String(), Name: "Learn Go"},
@@ -55,50 +53,53 @@ func loadInitialTasks() {
 	for _, task := range defaultTasks {
 		taskMap[task.ID] = task
 	}
+	log.Println("Initial tasks loaded")
 }
 
-// getAllTasks handles the GET request to retrieve all tasks
 func getAllTasks(context *gin.Context) {
 	var taskList []Task
 	for _, task := range taskMap {
 		taskList = append(taskList, task)
 	}
 
+	log.Printf("Retrieving all tasks, total count: %d\n", len(taskList))
 	context.IndentedJSON(http.StatusOK, taskList)
 }
 
-// createTask handles the POST request to create a new task
 func createTask(context *gin.Context) {
 	var newTask Task
 
 	if err := context.BindJSON(&newTask); err != nil {
+		log.Println("Error creating task: Invalid task format")
 		context.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid task format"})
 		return
 	}
 
 	newTask.ID = uuid.New().String()
 	taskMap[newTask.ID] = newTask
+	log.Printf("New task created: ID %s, Name %s\n", newTask.ID, newTask.Name)
 	context.IndentedJSON(http.StatusCreated, newTask)
 }
 
-// getTaskByID handles the GET request to retrieve a task by its ID
 func getTaskByID(context *gin.Context) {
 	taskID := context.Param("id")
 
 	if task, exists := taskMap[taskID]; exists {
+		log.Printf("Retrieving task by ID: %s\n", taskID)
 		context.IndentedJSON(http.StatusOK, task)
 		return
 	}
 
+	log.Printf("Task not found by ID: %s\n", taskID)
 	context.IndentedJSON(http.StatusNotFound, gin.H{"message": "Task not found"})
 }
 
-// updateTaskByID handles the PUT request to update a task by its ID
 func updateTaskByID(context *gin.Context) {
 	taskID := context.Param("id")
 	var updatedTask Task
 
 	if err := context.BindJSON(&updatedTask); err != nil {
+		log.Println("Error updating task: Invalid task format")
 		context.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid task format"})
 		return
 	}
@@ -106,22 +107,25 @@ func updateTaskByID(context *gin.Context) {
 	if _, exists := taskMap[taskID]; exists {
 		updatedTask.ID = taskID
 		taskMap[taskID] = updatedTask
+		log.Printf("Task updated: ID %s\n", taskID)
 		context.IndentedJSON(http.StatusOK, updatedTask)
 		return
 	}
 
+	log.Printf("Attempted to update task, but not found by ID: %s\n", taskID)
 	context.IndentedJSON(http.StatusNotFound, gin.H{"message": "Task not found"})
 }
 
-// deleteTaskByID handles the DELETE request to remove a task by its ID
 func deleteTaskByID(context *gin.Context) {
 	taskID := context.Param("id")
 
 	if _, exists := taskMap[taskID]; exists {
 		delete(taskMap, taskID)
+		log.Printf("Task deleted: ID %s\n", taskID)
 		context.Status(http.StatusNoContent)
 		return
 	}
 
+	log.Printf("Attempted to delete task, but not found by ID: %s\n", taskID)
 	context.IndentedJSON(http.StatusNotFound, gin.H{"message": "Task not found"})
 }
