@@ -15,81 +15,91 @@ type Task struct {
 	Description string `json:"description"`
 }
 
-var tasks []Task
+var taskList []Task
 
 func init() {
 	if err := godotenv.Load(); err != nil {
-		panic("Error loading .env file")
+		log.Fatalf("Error loading .env file: %v", err)
 	}
 }
 
-func getTasks(w http.ResponseWriter, r *http.Request) {
+func getAllTasks(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(tasks)
+	if err := json.NewEncoder(w).Encode(taskList); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
-func getTask(w http.ResponseWriter, r *http.Request) {
+func getSingleTask(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	params := mux.Vars(r) //Get params
-	// Loop through tasks and find one with the id from the params
-	for _, item := range tasks {
-		if item.ID == params["id"] {
-			json.NewEncoder(w).Encode(item)
+	params := mux.Vars(r) // Get params
+	for _, task := range taskList {
+		if task.ID == params["id"] {
+			if err := json.NewEncoder(w).Encode(task); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
 			return
 		}
 	}
 	json.NewEncoder(w).Encode(&Task{})
 }
 
-func createTask(w http.ResponseWriter, r *http.Request) {
+func createNewTask(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	var task Task
-	_ = json.NewDecoder(r.Body).Decode(&task)
-	task.ID = "Some auto-generated ID" // This should be replaced with actual ID generation logic
-	tasks = append(tasks, task)
-	json.NewEncoder(w).Encode(task)
+	var newTask Task
+	if err := json.NewDecoder(r.Body).Decode(&newTask); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	newTask.ID = "Some auto-generated ID" // Replace with actual ID generation
+	taskList = append(taskList, newTask)
+	json.NewEncoder(w).Encode(newTask)
 }
 
-func updateTask(w http.ResponseWriter, r *http.Request) {
+func updateExistingTask(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
-	for index, item := range tasks {
-		if item.ID == params["id"] {
-			tasks = append(tasks[:index], tasks[index+1:]...)
-			var task Task
-			_ = json.NewDecoder(r.Body).Decode(&task)
-			task.ID = params["id"]
-			tasks = append(tasks, task)
-			json.NewEncoder(w).Encode(task)
+	for index, task := range taskList {
+		if task.ID == params["id"] {
+			taskList = append(taskList[:index], taskList[index+1:]...)
+			var updatedTask Task
+			if err := json.NewDecoder(r.Body).Decode(&updatedTask); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			updatedTask.ID = params["id"]
+			taskList = append(taskList, updatedTask)
+			json.NewEncoder(w).Encode(updatedTask)
 			return
 		}
 	}
 }
 
-func deleteTask(w http.ResponseWriter, r *http.Request) {
+func deleteExistingTask(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
-	for index, item := range tasks {
-		if item.ID == params["id"] {
-			tasks = append(tasks[:index], tasks[index+1:]...)
+	for index, task := range taskList {
+		if task.ID == params["id"] {
+			taskList = append(taskList[:index], taskList[index+1:]...)
 			break
 		}
 	}
-	json.NewEncoder(w).Encode(tasks)
+	json.NewEncoder(w).Encode(taskList)
 }
 
 func main() {
-	// DB connection string from .env
-	dbConnection := os.Getenv("DB_CONNECTION")
-	_ = dbConnection
+	// DB connection string from .env - Unused in example but might be used for real DB operations
+	dbConnectionString := os.Getenv("DB_CONNECTION")
+	_ = dbConnectionString
 
-	r := mux.NewRouter()
+	router := mux.NewRouter()
 
-	r.HandleFunc("/api/tasks", getTasks).Methods("GET")
-	r.HandleFunc("/api/tasks/{id}", getTask).Methods("GET")
-	r.HandleFunc("/api/tasks", createTask).Methods("POST")
-	r.HandleFunc("/api/tasks/{id}", updateTask).Methods("PUT")
-	r.HandleFunc("/api/tasks/{id}", deleteTask).Methods("DELETE")
+	router.HandleFunc("/api/tasks", getAllTasks).Methods("GET")
+	router.HandleFunc("/api/tasks/{id}", getSingleTask).Methods("GET")
+	router.HandleFunc("/api/tasks", createNewTask).Methods("POST")
+	router.HandleFunc("/api/tasks/{id}", updateExistingTask).Methods("PUT")
+	router.HandleFunc("/api/tasks/{id}", deleteExistingTask).Methods("DELETE")
 
-	log.Fatal(http.ListenAndServe(":8000", r))
+	log.Fatal(http.ListenAndServe(":8000", router))
 }
