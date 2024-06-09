@@ -21,66 +21,54 @@ func getTasks(c *gin.Context) {
 }
 
 func postTask(c *gin.Context) {
-	var newTask Task
-
-	if err := c.BindJSON(&newTask); err != nil {
+	newTask := bindTaskFromRequest(c)
+	if newTask == nil { // Error handling is done inside bindTaskFromRequest
 		return
 	}
 
-	tasks = append(tasks, newTask)
+	tasks = append(tasks, *newTask)
 	c.IndentedJSON(201, newTask)
 }
 
 func getTaskByID(c *gin.Context) {
 	id := c.Param("id")
 
-	for _, a := range tasks {
-		if a.ID == id {
-			c.IndentedJSON(200, a)
-			return
-		}
+	task, found := findTaskByID(id)
+	if found {
+		c.IndentedJSON(200, task)
+	} else {
+		c.IndentedJSON(404, gin.H{"message": "task not found"})
 	}
-	c.IndentedJSON(404, gin.H{"message": "task not found"})
 }
 
 func updateTask(c *gin.Context) {
 	id := c.Param("id")
-	var updatedTask Task
-
-	if err := c.BindJSON(&updatedTask); err != nil {
+	updatedTask := bindTaskFromRequest(c)
+	if updatedTask == nil { // Error handling inside bindTaskFromRequest
 		return
 	}
 
-	for i, a := range tasks {
-		if a.ID == id {
-			tasks[i] = updatedTask
-			c.IndentedJSON(200, updatedTask)
-			return
-		}
+	if updateTaskByID(id, updatedTask) {
+		c.IndentedJSON(200, updatedTask)
+	} else {
+		c.IndentedJSON(404, gin.H{"message": "task not found"})
 	}
-
-	c.IndentedJSON(404, gin.H{"message": "task not found"})
 }
 
 func deleteTask(c *gin.Context) {
 	id := c.Param("id")
-
-	for i, a := range tasks {
-		if a.ID == id {
-			tasks = append(tasks[:i], tasks[i+1:]...)
-			c.IndentedJSON(204, nil)
-			return
-		}
+	if deleteTaskByID(id) {
+		c.IndentedJSON(204, nil)
+	} else {
+		c.IndentedJSON(404, gin.H{"message": "task not yet deleted"})
 	}
-	c.IndentedJSON(404, gin.H{"message": "task not yet deleted"})
 }
 
 func main() {
 	router := gin.Default()
 
 	router.GET("/tasks", getTasks)
-	router.POST("/tasks", post 
-Task)
+	router.POST("/tasks", postTask)
 	router.GET("/tasks/:id", getTaskByID)
 	router.PUT("/tasks/:id", updateTask)
 	router.DELETE("/tasks/:id", deleteTask)
@@ -91,4 +79,42 @@ Task)
 	}
 
 	router.Run(":" + port)
+}
+
+func bindTaskFromRequest(c *gin.Context) *Task {
+	var newTask Task
+	if err := c.BindJSON(&newTask); err != nil {
+		c.IndentedJSON(400, gin.H{"message": "invalid request"})
+		return nil
+	}
+	return &newTask
+}
+
+func findTaskByID(id string) (*Task, bool) {
+	for _, task := range tasks {
+		if task.ID == id {
+			return &task, true
+		}
+	}
+	return nil, false
+}
+
+func updateTaskByID(id string, updatedTask *Task) bool {
+	for i, task := range tasks {
+		if task.ID == id {
+			tasks[i] = *updatedTask
+			return true
+		}
+	}
+	return false
+}
+
+func deleteTaskByID(id string) bool {
+	for i, task := range tasks {
+		if task.ID == id {
+			tasks = append(tasks[:i], tasks[i+1:]...)
+			return true
+		}
+	}
+	return false
 }
