@@ -8,7 +8,7 @@ interface Task {
 const TaskForm: React.FC<{ onAddTask: (taskText: string) => void }> = (props) => {
   const [enteredText, setEnteredText] = useState("");
 
-  const addTaskHandler = (event: React.FormHTMLAttributes<HTMLFormElement>) => {
+  const addTaskHandler = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (enteredText.trim().length === 0) {
       return;
@@ -52,7 +52,7 @@ const TaskList: React.FC<{ items: Task[]; onDeleteTask: (taskId: number) => void
           {editState.id === task.id ? (
             <input
               type="text"
-              value={editStat.text}
+              value={editState.text}
               onChange={editTaskHandler}
             />) : (
               task.text
@@ -94,7 +94,7 @@ const ToDoApp: React.FC = () => {
   return (
     <div>
       <TaskForm onAddTask={addTaskHandler} />
-      <Task+List items={tasks} onDeleteTask={deleteTaskHandler} onEditTask={editTaskHandler} />
+      <TaskList items={tasks} onDeleteTask={deleteTaskHandler} onEditTask={editTaskHandler} />
     </div>
   );
 };
