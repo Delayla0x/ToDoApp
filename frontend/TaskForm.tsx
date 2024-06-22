@@ -9,6 +9,11 @@ const TaskForm: React.FC<TaskFormProps> = ({ onTaskAdded }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
 
+  const clearForm = () => {
+    setTitle('');
+    setDescription('');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !description) {
@@ -20,12 +25,16 @@ const TaskForm: React.FC<TaskFormProps> = ({ onTaskAdded }) => {
       description,
     };
     try {
-      const response = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/tasks`, newTask);
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000';
+      const response = await axios.post(`${backendUrl}/tasks`, newTask);
       onTaskAdded(response.data);
-      setTitle('');
-      setDescription('');
+      clearForm();
     } catch (error) {
-      console.error('There was an error saving the task:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('There was an error saving the task:', error.response?.data || error.message);
+      } else {
+        console.error('There was an error saving the task:', error);
+      }
       alert('Failed to save task');
     }
   };
@@ -36,7 +45,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ onTaskAdded }) => {
         <label htmlFor="title">Title</label>
         <input
           type="text"
-          id="name"
+          id="title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           required
