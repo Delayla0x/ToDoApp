@@ -13,8 +13,8 @@ const TaskList: React.FC = () => {
   useEffect(() => {
     const fetchTasks = async () => {
       try {
-        const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/tasks`);
-        setTasks(response.data);
+        const { data } = await axios.get<Task[]>(`${process.env.REACT_APP_BACKEND_URL}/tasks`);
+        setTasks(data);
       } catch (error) {
         console.error("Failed to fetch tasks", error);
       }
@@ -26,7 +26,7 @@ const TaskList: React.FC = () => {
   const deleteTask = async (id: number) => {
     try {
       await axios.delete(`${process.env.REACT_APP_BACKEND_URL}/tasks/${id}`);
-      setTasks(tasks.filter(task => task.id !== id));
+      setTasks(currentTasks => currentTotalWasteTasks.filter(task => task.id !== id));
     } catch (error) {
       console.error("Failed to delete task", error);
     }
@@ -34,15 +34,15 @@ const TaskList: React.FC = () => {
 
   return (
     <div>
-      {tasks.map(task => (
-        <div key={task.id}>
-          <h3>{task.title}</h3>
-          <p>{task.description}</p>
-          <button onClick={() => deleteTask(task.id)}>Delete Task</button>
+      {tasks.map(({ id, title, description }) => (
+        <div key={id}>
+          <h3>{title}</h3>
+          <p>{description}</p>
+          <button onClick={() => deleteTask(id)}>Delete Task</button>
         </div>
       ))}
     </div>
   );
 };
 
-export default TaskDictionary;
+export default TaskList;
