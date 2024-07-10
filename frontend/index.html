@@ -7,13 +7,54 @@
     <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        :root {
+            --background-color: #ffffff;
+            --text-color: #000000;
+        }
+        
+        [data-theme="dark"] {
+            --background-color: #333333;
+            --text-color: #ffffff;
+        }
+
+        body {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            transition: background-color 0.3s ease;
+        }
+
+        button {
+            margin: 1rem;
+        }
+    </style>
 </head>
 <body>
     <div id="root"></div>
     <script type="text/babel">
         class App extends React.Component {
+            constructor(props) {
+                super(props);
+                this.state = {
+                    darkMode: false,
+                };
+            }
+
+            toggleDarkMode = () => {
+                this.setState({ darkMode: !this.state.darkMode }, () => {
+                    document.body.dataset.theme = this.state.darkMode ? 'dark' : 'light';
+                });
+            }
+
             render() {
-                return <h1>Hello, React!</h1>;
+                return (
+                    <div>
+                        <h1>Hello, React!</h1>
+                        <button onClick={this.toggleDarkMode}>
+                            {this.state.darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                        </button>
+                    </div>
+                );
             }
         }
         ReactDOM.render(<App />, document.getElementById('root'));
