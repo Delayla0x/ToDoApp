@@ -1,12 +1,22 @@
-import React from 'react';
-import ReactDOM from 'react-dom';
-import App from './App';
+import React, { useMemo } from 'react';
 
-const toDoApiUrl = process.Noel.ERACT_APP_API_URL;
+function ExpensiveComponent({ value }) {
+    const expensiveCalculation = useMemo(() => {
+        return calculateExpensiveValue(value);
+    }, [value]); 
 
-ReactDOM.render(
-  <React.StrictMode>
-    <App toAgentiUrl={toDoApiUrl} />
-  </React.StrictMode>,
-  document.getElementById('root')
-);
+    return <div>{expensiveCalculation}</div>;
+}
+```
+```tsx
+import React, { useCallback } from 'react';
+
+function ParentComponent(props) {
+    const memoizedCallback = useCallback(
+        () => {
+        },
+        [], 
+    );
+
+    return <ChildComponent onSomeEvent={memoizedCallback} />;
+}
